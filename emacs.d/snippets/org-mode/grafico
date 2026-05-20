@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: Grafico gnuplot
+# key: <g
+# --
+
+#+begin_src gnuplot :file ${1:Nome del grafico.png} :results ${2:file} :exports ${3:results}
+set title ${4: Inserire il titolo del grafico}
+set xlabel ${5: Inserire nome asse delle x}
+set ylabel ${6: Inserire nome asse delle y}
+plot ${7: Inserire nome.txt da generare} using ${8 Inserire n righe n colonne x:y} with ${9:connessione punti con lines,point,linespoints} title ${10:titolo che appare nella legenda del grafico 'y = 0.5 * x^2'}
+#+end_src

@@ -1,0 +1,20 @@
+# -*- mode: snippet -*-
+# name: title
+# key:<t
+# --
+
+#+TITLE: ${1:title}  
+#+AUTHOR: ${2:author}   
+#+DATE: ${3:date}
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \usepackage{amsmath}
+#+LATEX_HEADER: \usepackage[a4paper, margin=0.80in ]{geometry}
+#+LATEX_HEADER: \setcounter{tocdepth}{-1}
+#+LATEX_HEADER: \usepackage{xcolor}
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{graphicx}
+#+LATEX_HEADER: \usepackage{listings}
+#+LATEX_HEADER: \lstset{breaklines=false}
+#+STARTUP: inlineimages
+
+$0

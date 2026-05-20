@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: ai
+# key: <ai
+# --
+
+
+#+begin_ai
+${1:Scrivi il messaggio/domanda}
+$0
+#+end_ai

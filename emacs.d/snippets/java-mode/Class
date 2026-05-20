@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: java class
+# key: <c
+# --
+
+public class $0
+{
+
+$1
+
+}

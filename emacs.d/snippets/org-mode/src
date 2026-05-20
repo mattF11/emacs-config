@@ -1,0 +1,14 @@
+# -*- mode: snippet -*-
+# name: src
+# key:<s
+# --
+
+#+begin_src ${1:Linguaggio}
+
+${2:Scrivi il codice}
+
+#+end_src
+
+#+RESULTS:
+
+$0

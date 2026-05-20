@@ -1,0 +1,23 @@
+# -*- mode: snippet -*-
+# name: c
+# key: <c
+# --
+
+#+begin_src C
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+int main()
+{
+
+${1:Scrivi il codice}
+
+}
+
+#+end_src
+
+#+RESULTS:
+
+$0

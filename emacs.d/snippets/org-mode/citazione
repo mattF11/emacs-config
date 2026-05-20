@@ -1,0 +1,13 @@
+# -*- mode: snippet -*-
+# name: citazione
+# key: <ci	
+# --
+
+#+begin_quote
+
+${1:Inserisci il testo}
+
+#+end_quote
+
+
+$0

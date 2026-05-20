@@ -1,0 +1,17 @@
+# -*- mode: snippet -*-
+# name: Grafico Octave
+# key: <g
+# --
+
+#+begin_src octave :results file graphics :file plot.png :session
+x = 0:0.1:10;
+y = sin(x);
+grid on;
+hold on;
+plot(x, y);
+print("plot.png", "-dpng");
+title("${1:Nome grafico"});
+
+#+end_src
+
+$0

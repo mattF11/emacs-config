@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: java method
+# key: <m
+# --
+
+public $0 ()
+{
+
+return;
+
+}

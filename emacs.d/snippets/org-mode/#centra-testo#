@@ -1,0 +1,12 @@
+# -*- mode: snippet -*-
+# name: centra-testo
+# key: <ce
+# --
+
+#+begin_center
+
+${1:Inserisci il testo}
+
+#+end_center
+
+$0

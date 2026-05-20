@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: title
+# key:<t
+# --
+
+#+TITLE: ${1:title}  
+#+AUTHOR: ${1:author}   
+#+DATE: ${1:date} 
+$0
