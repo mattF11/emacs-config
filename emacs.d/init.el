@@ -22,21 +22,69 @@
 ;(setq dired-mouse-drag-files t) ;;drag dentro a EMACS
 ;(setq mouse-drag-and-drop-region t)  ;;drag and drop dentro a dired
 ;(setq mouse-drag-and-drop-region-cross-program t) ;;mouse-drag-and-drop-region-cross-program
+;;ridisegno delle finestre continuo da parte di emacs disattivato
+(setq frame-inhibit-impiled-resize t)
+;;disattivazione controllo di vc dei buffer per verificare se file git,attivo solo se trovato git
+(setq vc-handled-backends '(Git))
+(setq vc-defer-load t)
+
+
+;;siccome tresitter è già integrato in emacs e ha delle funzioni,si sta espandendo e tra qualche anno potrebbe
+;;essere il nuovo default e le altre in legacy-mode,allora lo settiamo subito,dovrebbe anche essere più
+;;veloce mentre lo si utilizza delle major mode con regexp e più preciso in parsing e syntax highlighting
+;;utilizza major-mode-remap-alist per sostituire le vecchie modes con quelle treesitter
+(setq major-mode-remap-alist
+      '((c-mode . c-ts-mode)
+        (c++-mode . c++-ts-mode)
+        (java-mode . java-ts-mode)
+        (sh-mode . bash-ts-mode)
+        (python-mode . python-ts-mode)))
+
+;; (add-hook 'java-ts-mode-hook
+;;           (lambda ()
+;;             (c-toggle-auto-newline 1)))
+
+;;posso implementare livelli diversi di evidenziazione e identazione
+(setq treesit-font-lock-level 4)
+;;eglot si integra con tutti gli strumenti inclusi in emacs,come eglot,usiamo amche treesitter folding
+;; (use-package ts-fold
+;;   :hook ((c-ts-mode . ts-fold-mode)
+;;          (java-ts-mode . ts-fold-mode)
+;;          (bash-ts-mode . ts-fold-mode)))
+
+
+;;MODIFICHE FONDAMENTALI
+(defun my-ts-auto-newline-and-indent ()
+  "Attiva l'auto-newline e l'auto-indentazione dopo il ';' per i linguaggi C-like con Tree-sitter."
+  ;; Controlla se la modalità corrente è una delle modalità TS di tipo "C-like"
+  (when (memq major-mode '(c-ts-mode c++-ts-mode java-ts-mode))
+    
+    ;; 1. Configura electric-layout-mode per andare a capo dopo il punto e virgola
+    (setq-local electric-layout-rules '((?\; . after)))
+    (electric-layout-mode 1)
+
+    ;; 2. Rimappa il tasto ';' solo in questo buffer per gestire l'indentazione immediata della nuova riga
+    (local-set-key (kbd ";") 
+                   (lambda ()
+                     (interactive)
+                     (self-insert-command 1)       ; Inserisce ';' (scatta electric-layout)
+                     (indent-according-to-mode)    ; Indenta la riga appena lasciata
+                     (forward-line 1)              ; Si sposta sulla nuova riga vuota
+                     (indent-according-to-mode)    ; La indenta subito correttamente
+                     (forward-line -1)             ; Torna alla riga precedente...
+                     (end-of-line)                 ; ...va alla fine...
+                     (forward-line 1)              ; ...e si posiziona sulla nuova riga pronto a scrivere
+                     (back-to-indentation)))))
+
+;; Applica la funzione a tutte le modalità di programmazione (filtrerà da sola i linguaggi corretti)
+(add-hook 'prog-mode-hook #'my-ts-auto-newline-and-indent)
+
 
 ;;DIRED SIDEBAR MODIFICHE:lazy loaded per evitare sia caricata quando non serve
 (use-package dired-sidebar
   :ensure t
   :commands (dired-sidebar-show-sidebar)
-  :hook (c-mode-common . dired-sidebar-show-sidebar))
-
-;; Chiudi sidebar quando il buffer attivo NON è cc-mode
-;; (add-hook 'window-selection-change-functions
-;;           (lambda (_win)
-;;             (with-current-buffer (window-buffer)
-;;               (unless (derived-mode-p 'c-mode-common)
-;;                 (dired-sidebar-hide-sidebar)))))
-
-
+  :hook (java-ts-mode . dired-sidebar-show-sidebar))
 
 ;;file recenti attivati
 (recentf-mode 1)
@@ -84,13 +132,14 @@
 
   ;;per fare lo swap dei buffers
   (use-package ace-window
-  :ensure t
+    :ensure t
+    :defer t
   :bind
   (("M-o" . ace-swap-window))) ; esempio default
   ;;il comando di base per cambiare focus è C-x o
 
-;;GESTIONE UI
 
+;;GESTIONE UI
 (global-display-line-numbers-mode 1)
 (tool-bar-mode -1) ;disattivazione tool bar(superflua se sai i comandi)
 (scroll-bar-mode -1) ;disattivazione scrollbar(ho già indicazione nella modeline
@@ -105,12 +154,12 @@
 ;;utilizzo di eldoc per avere tipo lsp senza lsp
 (global-eldoc-mode 0) 
 ;(global-corfu-mode 0)
-(global-ede-mode t)
 
 
+;;ATTIVAZIONE DI GLOBAL EDE MODE
+;(global-ede-mode 1)
 (use-package eldoc-box
   :disabled t)
-
 
 ;;markdown mode
 (use-package markdown-mode
@@ -146,14 +195,13 @@
                      (lambda ()
                        (when (string-equal (file-name-extension buffer-file-name) "org")
                          (goto-char (point-min)))))
-
-           ;;Org-download
-           (use-package org-download
-             :ensure t
-	     :defer t
-             :config
-             (setq org-download-directory "~/Immagini/Schermate/")
-             (global-set-key (kbd "C-x C-d") 'org-download-screenshot))
+           ;; ;;Org-download
+           ;; (use-package org-download
+           ;;   :ensure t
+           ;;   :defer t
+           ;;   :config
+           ;;   (setq org-download-directory "~/Immagini/Schermate/")
+           ;;   (global-set-key (kbd "C-x C-d") 'org-download-screenshot))
            ;;pacchetto Yas-Snippet
            (use-package yasnippet
              :ensure t
@@ -164,14 +212,10 @@
          ;  (use-package ox-reveal)
          ;pandoc/ox-pandoc
            (add-to-list 'exec-path "/home/Pandoc")
-					;ORG-MODE-LATEX-GRAFICI
+                                        ;ORG-MODE-LATEX-GRAFICI
            (setq org-latex-pdf-process
                  '("pdflatex -interaction nonstopmode %f"
                    "pdflatex -interaction nonstopmode %f"))
-
-           ;;visualizzare immagini con emacs per org mode
-           (setq org-startup-with-inline-images t)
-(setq org-display-inline-images t)
 
            ;;visualizzare immagini con emacs per org mode
            (setq org-startup-with-inline-images t)
@@ -186,7 +230,6 @@
            ;;Ã¨ una rottura e non sono riuscito a farlo ancora in un blocco src latex
            ;;(setq org-preview-latex-default-process 'dvipng)
 
-
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((C . t)
@@ -196,6 +239,7 @@
      (matlab . t)
      (python . t)))
 
+;;attenzione 
 
 ;; Impostazioni per utilizzare MATLAB/Octave in Emacs
 ;;(executable-find matlab-executable)
@@ -296,12 +340,7 @@
   :defer t
     :init
     (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
-;;pacchetto pdf-tools
-(use-package pdf-tools
-  :ensure t
- ; :defer t
-  :config
-  (pdf-tools-install))
+
 ;;risoluzione di docview
 ;;caratteri testo di docview e antialiasing
 (setq doc-view-resolution 180) ;; Imposta la risoluzione a 200
@@ -338,19 +377,19 @@
 ;;settiamo dei default atti a semplificare/facilitare e velocizzare la scrittura di testo/codice
 ;; Flyspell per testi (Org, Markdown, commenti)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (add-hook 'text-mode-hook 'flyspell-mode)					    ;;
-;; ;; Popup moderno								    ;;
-;; ;(add-hook 'text-mode-hook #'corfu-mode)					    ;;
-;; ;; Imposta dizionari								    ;;
-;; ;(setq ispell-dictionary "italian")						    ;;
-;; ;(setq ispell-local-dictionary "italian")					    ;;
-;; ;(setq ispell-dictionary-alist						    ;;
+;; (add-hook 'text-mode-hook 'flyspell-mode)                                        ;;
+;; ;; Popup moderno                                                                 ;;
+;; ;(add-hook 'text-mode-hook #'corfu-mode)                                         ;;
+;; ;; Imposta dizionari                                                             ;;
+;; ;(setq ispell-dictionary "italian")                                              ;;
+;; ;(setq ispell-local-dictionary "italian")                                        ;;
+;; ;(setq ispell-dictionary-alist                                                   ;;
 ;;  ;     '(("italian" "[A-Za-z]" "[^A-Za-z]" "[']" nil ("-d" "it_IT") nil utf-8)   ;;
 ;;   ;      ("english" "[A-Za-z]" "[^A-Za-z]" "[']" nil ("-d" "en_US") nil utf-8)   ;;
 ;;    ;     ("french"  "[A-Za-z]" "[^A-Za-z]" "[']" nil ("-d" "fr_FR") nil utf-8))) ;;
-;; ;;per passare a quello inglese: M-x ispell-change-dictionary RET english	    ;;
-;; ;; Flyspell nei commenti del codice						    ;;
-;; (add-hook 'prog-mode-hook #'flyspell-prog-mode)				    ;;
+;; ;;per passare a quello inglese: M-x ispell-change-dictionary RET english         ;;
+;; ;; Flyspell nei commenti del codice                                              ;;
+;; (add-hook 'prog-mode-hook #'flyspell-prog-mode)                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Attiva parentesi automatiche
 (electric-pair-mode 1)
@@ -361,6 +400,7 @@
 (add-hook 'c-mode-common-hook
           (lambda ()
             (c-toggle-auto-newline 1)))
+
 
 (setq-default mode-line-format
   (list
@@ -385,7 +425,7 @@
     ;;imposta default valore del GC quando emacs non Ã¨ attivo
     (add-hook 'emacs-startup-hook
               (lambda ()
-                (setq gc-cons-threshold (* 2 1024 1024))))
+                (setq gc-cons-threshold (* 16 1024 1024))))
 
     (setq large-file-warning-threshold 100000000) ;;supporto file olte 100 MB
 
@@ -393,10 +433,64 @@
 ;;SETUP EGLOT
 (use-package eglot)
 (use-package eglot-java
-  :requires eglot
+  :after eglot
   :config
   (progn
-    (add-hook 'java-mode-hook 'eglot-java-mode)))
+   ;(add-hook 'java-mode-hook 'eglot-java-mode)
+    ;;sostituisco hook per java-mode classico con il moderno treesitter integrato in emacs
+    (add-hook 'java-ts-mode-hook 'eglot-java-mode)
+    ))
+
+;;evita che eglot crea workspace temporaneo ogni volta(aggiunto dopo)
+(setq eglot-workspace-configuration
+      '(:java (:workspace (:path "~/.emacs.d/jdtls-workspace"))))
+;;setup grabage collecto consigliato(aggiunto dopo)
+(setq eglot-java-server-command
+      '("jdtls"
+        "-XX:+UseG1GC"))
+
+;;folding delle parentesi come negli altri ide/text editor: geany/eclipse/vscode (folding senza pacchetti esterni)
+;;hs-minor-mode utilizzato per il folding
+;;1) Attiva hideshow in tutti i linguaggi
+(add-hook 'prog-mode-hook #'hs-minor-mode)
+;; 2) Simbolo custom per il blocco foldato
+(setq hs-set-up-overlay
+      (lambda (ov)
+        (overlay-put ov 'invisible t)     ;; nasconde tutto il blocco
+        (overlay-put ov 'display " ⤷ ")   ;; <-- cambia qui il simbolo
+        (overlay-put ov 'face '(:weight bold))))
+
+;; 3) Funzione: trova la prossima { e folda/unfolda
+(defun hs-toggle-next-block ()
+  "Vai alla prossima parentesi '{' e folda/unfolda il blocco con hideshow."
+  (interactive)
+  (let ((pos (save-excursion
+               (search-forward "{" nil t))))
+    (if pos
+        (progn
+          (goto-char pos)
+          (backward-char 1)
+          (hs-toggle-hiding))
+      (message "Nessuna parentesi trovata dopo il cursore."))))
+
+;;4) blocco precedente
+(defun hs-toggle-previous-block ()
+  "Trova la precedente '{' e folda/unfolda il blocco con hideshow."
+  (interactive)
+  (let ((pos (save-excursion (search-backward "{" nil t))))
+    (if pos
+        (progn
+          (goto-char pos)
+          (hs-toggle-hiding))
+      (message "Nessuna parentesi trovata prima del cursore."))))
+
+;; 5) Keybinding
+(define-key prog-mode-map (kbd "C-c n") #'hs-toggle-next-block)
+(define-key prog-mode-map (kbd "C-c p") #'hs-toggle-previous-block)
+(define-key prog-mode-map (kbd "C-c s") #'hs-show-all)
+(define-key prog-mode-map (kbd "C-c h") #'hs-hide-all)
+   ;;    (overlay-put ov 'display " ⤷ ")  ;; ‣ ▾ ▼
+;;(define-key prog-mode-map (kbd "C-c n") #'hs-toggle-next-block)
 
 
 ;;DASHBOARD
@@ -421,12 +515,11 @@
   (setq dashboard-center-content t)
   (setq dashboard-show-shortcuts t)
   ;(setq dashboard-set-file-icons t)
-  (setq dashboard-set-heading-icons t) ;; <-- corretto
+ ;(setq dashboard-set-heading-icons t) 
   ;; Cosa mostra la Dashboard
   (setq dashboard-items '((recents  . 7)
                           (projects . 5)))
-  ;; Avvia la dashboard
-  (dashboard-setup-startup-hook))
+)
 
 ;; Abilita dashboard
 (dashboard-setup-startup-hook)
@@ -450,16 +543,15 @@
      "a5c590aeb7dc5c2b8d36601a4c94a1145e46bd2291571af02807dd7a8552630c"
      default))
  '(package-selected-packages
-   '(ace-window atom-dark-theme atom-one-dark-theme auctex cuda-mode
-		dashboard devdocs dired-sidebar eglot-java emms
-		hide-mode-line ivy lv markdown-mode matlab-mode
-		nerd-icons-dired nov org-download
-		organize-imports-java pdf-tools spinner vterm
-		yasnippet)))
+   '(ace-window atom-dark-theme auctex cuda-mode dashboard dired-sidebar
+		eglot-java emms hide-mode-line ivy lv markdown-mode
+		matlab-mode nerd-icons-dired nov organize-imports-java
+		pdf-tools system-packages vterm yasnippet)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
 
