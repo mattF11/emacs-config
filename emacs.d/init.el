@@ -1,26 +1,20 @@
-;;(setq-default mode-line-format (default-value 'mode-line-format))
-  ;;(setq use-package-always-defer t)
+;(setq-default mode-line-format (default-value 'mode-line-format))
 
   (require 'package)
   ;; Aggiunge MELPA come archivio di pacchetti
   (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/") t)
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
-;;richiamo tabs-custom.el file dalla directory lisp
-;;(load "~/.emacs.d/lisp/custom-tabs.el")
-
 (setq native-comp-async-report-warnings-errors nil)
+(setq use-package-compute-statistics t)
 
-;;default modeline custom settings
- ;; (setq-default mode-line-format
- ;;  (list
- ;;   '(:eval (concat " " (nerd-icons major-mode) " "))
- ;;   'mode-line-buffer-identification
- ;;   "   "
- ;;   'mode-line-position
- ;;   "  "
- ;;   'mode-line-modes
- ;; 'mode-line-misc-info))
+;;font settings
+;; Imposta il font principale 
+(defvar my/default-font "Source Code Pro Medium 11")
+
+;; 1. Applica il font al frame corrente
+(set-face-attribute 'default nil :font my/default-font)
+
 
 ;;REPEAT:permette di ripetere il comando da tastiera premendo una sola lettera
 (use-package repeat
@@ -41,10 +35,7 @@
 ;; (add-hook 'gud-mode-hook #'gud-menu-init)
 
 
-
-
-
-(require 'gud)
+(use-package gud)
 (defun my/add-gud-menu-to-prog-mode ()
   (easy-menu-add-item
    nil
@@ -55,24 +46,7 @@
 (add-hook 'prog-mode-hook #'my/add-gud-menu-to-prog-mode)
 
 
-
-
-
-
-
-;;aggiunta funzioni aggiuntive git in emacs mancanti a VC
-(use-package git
-  :ensure t)
-(use-package vc-msg
-  :ensure t)
-;; Navigazione commit
-(use-package git-timemachine
-  :ensure t)
-;; Modalità per file Git
-(use-package git-modes
-  :ensure t)
-
-;; ;; Doom modeline
+;; ;; ;; Doom modeline
 (use-package doom-modeline
   :ensure t
   :init (doom-modeline-mode 1)
@@ -88,7 +62,7 @@
 
 ;;Elenco di tutti i settaggi di diversi aspetti/parti della ui con relative scoriatioi che non siano
 ;;la modeline
-  
+
   ;;GESTIONE UI
   (global-display-line-numbers-mode 1)
   (tool-bar-mode -1) ;disattivazione tool bar(superflua se sai i comandi)
@@ -99,25 +73,30 @@
   ;;(define-key corfu-map (kbd "<f11>") nil)
   ;;utilizzo di eldoc per avere tipo lsp senza lsp
   (global-eldoc-mode 1) 
-  ;(global-corfu-mode 0)
+;;(global-corfu-mode 0)
+
+
+;; Collega il completamento nel buffer al sistema Vertico + Consult (già presenti nel tuo setup)
+(setq completion-in-region-function #'consult-completion-in-region)
+;; Opzionale: fa sì che premendo TAB il cursore prima indenti la riga 
+;; e, se è già indentata, mostri subito i suggerimenti LSP/Eglot
+(setq tab-always-indent 'complete)
+;; Impedisce a TAB di eseguire l'indentazione se c'è un menu di completamento attivo
+(setq-default indent-tabs-mode nil)
+
 
 ;;Pacchetto fondamentale per avere un terminale che funziona bene in emacs che non sia una shell vera e propria
 ;;IMPOSTO BASH COME SHELL DEFAULT DI VTERM
-(setq vterm-shell "/bin/bash")
+;(setq vterm-shell "/bin/bash")
 
   ;;DISABILITO I BACKUP E AUTOSAVE
-  (setq make-backup-files nil)  ;; Disabilita i file di backup (~)
-  (setq auto-save-default nil)  ;; Disabilita il salvataggio automatico
-
-
-;(declare-function cape-keyword "cape")
-;(declare-function emms-all "emms")
-;(declare-function emms-default-players "emms")
-;(declare-function emms-mpris-enable "emms")
-;(declare-function c-toggle-auto-newline)
+(setq make-backup-files nil)  ;; Disabilita i file di backup (~)
+(setq auto-save-default nil)  ;; Disabilita il salvataggio automatico
 
 
 (setq native-comp-async-report-warnings-errors nil)
+
+
 
 ;; Nella sezione linguaggi è inserito tutto il codice che può riguardare i linguaggi di programmazione,
 ;; da org-mode a funzioni speciali.
@@ -131,16 +110,19 @@
 ;; assembly,credo anche verilog
 
 
-  
-  ;;SETUP EGLOT
-(use-package eglot)
 
-;;QUANDO USO RESTORE DELLA SESSIONE TOLGO COMMENTI A QUESTO BLOCCO
-;; Evita che Eglot parta durante il restore della sessione
-;; (defun my/eglot-skip-during-desktop-restore ()
-;;   (when (and (boundp 'desktop-restoring)
-;;              desktop-restoring)
-;;     (setq eglot--managed-mode nil)))
+
+ ;;SETUP EGLOT
+(use-package eglot
+  :defer t
+  :hook ((c-ts-mode 
+          c++-ts-mode 
+          python-ts-mode 
+          bash-ts-mode) . eglot-ensure)
+  :hook (java-ts-mode . (lambda ()
+                          (require 'eglot-java)
+                          (eglot-java-mode)
+                          (eglot-ensure))))
 
 (use-package eglot-java
   :after eglot
@@ -150,7 +132,9 @@
      ;(add-hook 'java-mode-hook 'eglot-java-mode)
       ;;sostituisco hook per java-mode classico con il moderno treesitter integrato in emacs
       (add-hook 'java-ts-mode-hook 'eglot-java-mode)
-      ))
+      )
+ )
+
 
   ;;evita che eglot crea workspace temporaneo ogni volta(aggiunto dopo)
   (setq eglot-workspace-configuration
@@ -158,7 +142,9 @@
   ;;setup grabage collecto consigliato(aggiunto dopo)
   (setq eglot-java-server-command
         '("jdtls"
-          "-XX:+UseG1GC"))
+	  "-Xms256m"
+          "-XX:+UseZGC"
+	  "-XX:+UseStringDeduplication"))
 
 
 
@@ -178,6 +164,7 @@
 ;;             (lambda ()
 ;;               (unless (bound-and-true-p desktop-restoring)
 ;;                 (eglot-java-mode)))))
+
 
 
 
@@ -395,7 +382,6 @@
    (java . t)
    (latex . t)
    (matlab . t)
-   (python . t)
    (plantuml .t)))
 
 
@@ -415,34 +401,32 @@
 ;(setq mouse-drag-and-drop-region-cross-program t) ;;mouse-drag-and-drop-region-cross-program
 
 ;; EMMS: musica e video con MPV
-  (use-package emms
-    :ensure t
-    :defer t
-    :config
+(use-package emms
+  :defer t
+  :commands (emms emms-browser emms-play-playlist)
+  :init
+  (with-eval-after-load 'emms
     (require 'emms-setup)
     (require 'emms-mpris)
     (require 'emms-browser)
-    ;;aggiunta delle immagini a emms:inizio
+    (require 'emms-info-libtag)
     (setq emms-browser-show-images t
           emms-browser-thumbnail-small-size 64
-          emms-browser-thumbnail-medium-size 128)
-    (require 'emms-info)
-    (require 'emms-info-libtag)
-    (setq emms-info-functions '(emms-info-libtag))
-    ;;immagini aggiunte:fine
-    (require 'emms-cache)
+          emms-browser-thumbnail-medium-size 128
+          emms-info-functions '(emms-info-libtag))
     (emms-all)
     (emms-default-players)
-    (emms-mpris-enable)
-    :custom
-    (emms-browser-covers #'emms-browser-cache-thumbnail-async)
-    :bind
-    (("C-c w m b" . emms-browser)
-     ("C-c w m e" . emms)
-     ("C-c w m p" . emms-play-playlist )
-     ("<XF86AudioPrev>" . emms-previous)
-     ("<XF86AudioNext>" . emms-next)
-     ("<XF86AudioPlay>" . emms-pause)))
+    (emms-mpris-enable))
+  :custom
+  (emms-browser-covers #'emms-browser-cache-thumbnail-async)
+  :bind
+  (("C-c w m b" . emms-browser)
+   ("C-c w m e" . emms)
+   ("C-c w m p" . emms-play-playlist)
+   ("<XF86AudioPrev>" . emms-previous)
+   ("<XF86AudioNext>" . emms-next)
+   ("<XF86AudioPlay>" . emms-pause)))
+
 
   (defun dired-play-video-with-mpv ()
     "Riproduce il file video selezionato in Dired con MPV."
@@ -517,57 +501,9 @@
 
 
 
-
-
-
-;; === SESSIONE STABILE E COMPATIBILE ===
-
-;; ;; 1) Directory della sessione
-;; (setq desktop-dirname "~/.emacs.d/session/"
-;;       desktop-base-file-name "emacs-desktop"
-;;       desktop-path (list desktop-dirname)
-;;       desktop-save t
-;;       desktop-load-locked-desktop t
-;;       desktop-restore-eager 5
-;;       desktop-auto-save-timeout nil)
-
-;; ;; 2) Attiva il salvataggio della sessione
-;; (desktop-save-mode 1)
-
-;; ;; 3) Salva posizione del cursore
-;; (save-place-mode 1)
-
-;; ;; 4) Salva cronologia minibuffer, ricerche, M-x, ecc.
-;; (savehist-mode 1)
-
-;; ;; 5) Salva layout finestre
-;; (winner-mode 1)
-
-;; ;; 6) Leggi la sessione all’avvio
-;; (add-hook 'emacs-startup-hook #'desktop-read)
-
-;; ;; 7) Salva la sessione alla chiusura
-;; (add-hook 'kill-emacs-hook #'desktop-save-in-desktop-dir)
-
-;; ;; 8) Escludi TUTTI i buffer problematici (regex corretti)
-;; (setq desktop-files-not-to-save
-;;       (concat "\\("
-;;               ;;"dired-sidebar"
-;;               "\\|\\*dape-.*"
-;;               ;;"\\|\\*Messages\\*"
-;;               ;;"\\|\\*scratch\\*"
-;;               "\\|\\*Compile-Log\\*"
-;;               "\\|\\*Backtrace\\*"
-;;               ;;"\\|\\*Warnings\\*"
-;;               "\\)"))
-
-
-
-
-
-
     ;;file recenti attivati
-    (recentf-mode 1)
+(recentf-mode 1)
+(setq recentf-max-menu-items 30)
 
     ;;projectile-mode per gestire progetto
     ;(use-package projectile
@@ -584,11 +520,25 @@
       
       (pdf-tools-install))
 
-    ;;vterm
-    (use-package vterm
-      :ensure t
-      :defer t
-      :commands vterm)
+
+
+;;ghostel
+;;ghostel è ben più veloce di vterm ed è meglio come terminale classico in emacs,come rendering per nano e altro
+(use-package ghostel
+  :ensure t)
+
+(use-package ghostel-compile
+  :hook (after-init . ghostel-compile-global-mode))
+
+(use-package ghostel-eshell
+  :hook (eshell-load . ghostel-eshell-visual-command-mode))
+
+(use-package ghostel-comint
+  :hook (shell-mode-hook #'ghostel-comint-mode))
+
+
+
+
 
     ;;Flyspell
     (use-package flyspell
@@ -642,12 +592,20 @@
   :init
   (vertico-mode 1))
 
+;;comandi avanzati con consult
 (use-package consult
   :ensure t)
 
+;;stile di completamento con M-x
 (use-package orderless
-  :ensure t)
-
+  :ensure t
+  :init
+  ;; Imposta Orderless come stile di completamento
+  (setq completion-styles '(orderless)
+        completion-category-defaults nil
+        completion-category-overrides '((command (styles orderless)) ;;stile
+                                        (file (styles orderless))  ;file
+                                        (symbol (styles orderless)))))  ;;simbolo
 
 ;; Read ePub files
 (use-package nov  ;;utilizza il pacchetto nov.el di Schneidermann
@@ -679,7 +637,6 @@
 
 
 
-
 (use-package dashboard
   :ensure t
   :config
@@ -695,6 +652,8 @@
   ;; Opzioni estetiche
   (setq dashboard-center-content t)
   (setq dashboard-show-shortcuts t)
+  (setq dashboard-set-file-icons t)
+  (setq dashboard-set-heading-icons t)
 
   ;; Sezioni mostrate
   (setq dashboard-items '((recents  . 10)
@@ -702,7 +661,6 @@
 
 ;; Attiva dashboard
 (dashboard-setup-startup-hook)
-
 ;; Centra verticalmente la dashboard
 (add-hook 'dashboard-after-initialize-hook
           (lambda ()
@@ -713,9 +671,11 @@
 
 
 
+;;configurazione magit
+(use-package magit
+  :defer t
+  :ensure t)
 
-;;tab-bar-mode
-;;(tab-bar-mode t)
 
 
 ;CONFIGURIAMO ELFEED
@@ -730,19 +690,41 @@
           ("https://sachachua.com/blog/feed/" emacs)
           ("https://irreal.org/blog/?feed=rss2" emacs)
           ("https://www.gnu.org/software/emacs/rss.xml" emacs)
-
           ;; Fotografia
           ("https://www.35mmc.com/feed/" photo)
           ("https://phillipreeve.net/blog/feed/" photo)
           ("https://www.thephoblographer.com/feed/" photo)
           ("https://mrleica.com/feed/" photo)
-
+	  ("https://tahusa.co/feed/" photo)
+	  ;; non ha un feed rss ("https://www.juzaphoto.com/home.php?l=it" photo)
+	  ;;fred miranda non ha rss feed
+	  ;; Linux
+	  ("https://news.opensuse.org/feed.xml" linux)
+	  ;; Elettronica
+	  ("https://www.eevblog.com/feed/" elettronica)  
           ;; YouTube (via RSS)
           ("https://www.youtube.com/feeds/videos.xml?channel_id=UCRte2QViSKBN5tM5YL7tTcg" youtube)
           ("https://www.youtube.com/feeds/videos.xml?channel_id=UCknMR7NOY6ZKcVbyzOxQPhw" youtube)
 	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCs52U_Q9TYSHtd9oxD4WN0A" youtube)
 	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCxSiyTe60iQAY1UqCylNMmw" youtube)
 	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UC05XpvbHZUQOfA6xk4dlmcw" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCkgqk1hG-E0qINRY8k5VTng" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCHZIqNx-vU_PX8OArquXw_g" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCp_5PO66faM4dBFbFFBdPSQ" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCIdYIrInVnUwHVbogLj6bqA" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCsaGKqPZnGp_7N80hcHySGQ" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCZb8uqR_73t8DlfpVfVbiEw" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCIEv3lZ_tNXHzL3ox-_uUGQ" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCOTGxmnJatVdD1QOZs0rriA" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCeMbZC8Uv9uJArqFQnFCDNQ" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UC7YOGHUfC1Tb6E4pudI9STA" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCgkw_MMOy6k1wGN9VM3kKOA" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCqNkn5PNeSqbQTAR5RP-L-Q" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCp3yVOm6A55nx65STpm3tXQ" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCNLRcEn78Vc62C3GkMvBgtA" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UC2DjFE7Xf11URZqWBigcVOQ" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCJQkHVpk3A8bgDmPlJlOJOA" youtube)
+	  ("https://www.youtube.com/feeds/videos.xml?channel_id=UCRte2QViSKBN5tM5YL7tTcg" youtube)
           )))
 
 (use-package elfeed-tube
@@ -770,6 +752,9 @@
 (global-set-key (kbd "C-c e") #'elfeed)
 ;;leggere articoli in eww come default
 ;(setq browse-url-browser-function #'eww-browse-url)
+;;eww formule correte
+;(setq eww-enable-javascript)
+
 
 
 (custom-set-variables
@@ -790,13 +775,19 @@
      "720838034f1dd3b3da66f6bd4d053ee67c93a747b219d1c546c41c4e425daf93"
      "a5c590aeb7dc5c2b8d36601a4c94a1145e46bd2291571af02807dd7a8552630c"
      default))
- '(package-selected-packages nil))
-
-
+ '(package-selected-packages
+   '(ace-window all-the-icons atom-dark-theme auctex bui cfrs consult
+		cuda-mode curl-to-elisp dashboard dired-sidebar
+		doom-modeline eglot eglot-java elfeed-tube-mpv ement
+		geiser-guile ghostel hide-mode-line ht hydra
+		load-relative loc-changes magit markdown-mode
+		matlab-mode mpvi multiple-cursors nerd-icons-dired nov
+		orderless pandoc pandoc-mode pdf-tools pfuture popup
+		powerline ssh system-packages test-simple tramp-rpc
+		vertico yaml yasnippet ytdl)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
-(put 'completion-list-mode 'disabled t)
